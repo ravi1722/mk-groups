@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
 
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'verified']], function () {
     Route::get('/', [AdminController::class, 'index'])->name('admin.index');
+    Route::post('/getall', [AdminController::class, 'getall'])->name('admin.getall');
 });
 
 require __DIR__.'/auth.php';

@@ -12,7 +12,8 @@ class AdminController extends Controller
     {
 
         $amounts = DB::select("Select id,amount from amountmaster");
-        return Inertia::render('Admin/Index', compact("amounts"));
+        $mop = DB::select("Select id,modeofpayment from mop_master");
+        return Inertia::render('Admin/Index', compact("amounts", "mop"));
     }
     public function getall(Request $request)
     {
@@ -22,29 +23,54 @@ class AdminController extends Controller
             if ($mode == 'getamountbymonth') {
                 $month = date('m', strtotime($request->month));
                 $year = date('Y', strtotime($request->month));
+                $endDate = date('Y-m-d', strtotime($request->month)) . " 00:00:00";
+                $eamountid = $request->eamountid;
 
-                $result = DB::select("Select a.id,name,email,mobile,DATE_FORMAT(created_at, '%D %M %Y') created_at,
+                $result['bydate'] = DB::select("Select a.id,name,email,mobile,DATE_FORMAT(created_at, '%D %M %Y') created_at,a.mopid,
                 modeofpayment,NVL(c.amount,0) amount from users a Left join mop_master b on a.mopid=b.id left Join entrytrans c on a.id=c.userid 
-                and month(c.date) = " . $month . " and year(c.date) = " . $year . "");
+                and c.amountmasterid=" . $eamountid . " and month(c.date) = " . $month . " and year(c.date) = " . $year . " order by a.id");
+                $beforedate = DB::select("Select NVL(sum(amount),0) amount from entrytrans where amountmasterid=" . $eamountid . " and date < '" . $endDate . "'");
+                $result['nodate'] = $beforedate[0]->amount;
             }
-            if ($mode == 'saveamount') {
-                $amount = $request->amount;
-                $userid = $request->userid;
-                $date = date('Y-m-d', strtotime($request->month));
-                $month = date('m', strtotime($request->month));
-                $year = date('Y', strtotime($request->month));
+            if ($mode == 'editdata') {
+                $editdata = $request->editdata;
 
-                $getdata = DB::select("Select transid from entrytrans where userid=" . $userid . " and month(date) = " . $month . " and year(date) = " . $year . "");
-                if (count($getdata) > 0) {
-                    $sSql = "Update entrytrans set amount=" . $amount . " where userid=" . $userid . " and month(date) = " . $month . " and year(date) = " . $year . "";
+                if (count($editdata) > 0) {
+                    $userid = $editdata['id'];
+                    $name = $editdata['name'];
+                    $email = $editdata['email'];
+                    $mobile = $editdata['mobile'];
+                    $mopid = $editdata['mopid'];
+                    $amount = $editdata['amount'];
+
+                    $eamountid = $request->eamountid;
+                    $date = date('Y-m-d', strtotime($request->month));
+                    $month = date('m', strtotime($request->month));
+                    $year = date('Y', strtotime($request->month));
+
+                    $sSql = "Update users set name='" . $name . "',email='" . $email . "',mobile='" . $mobile . "',mopid=" . $mopid . " where id=" . $userid;
                     DB::update($sSql);
-                } else {
-                    DB::table('entrytrans')->insert([
-                        'amount' => $amount,
-                        'userid' => $userid,
-                        'date' => $date,
-                    ]);
+
+                    $getdata = DB::select("Select transid from entrytrans where amountmasterid=" . $eamountid . " and userid=" . $userid . " and month(date) = " . $month . " and year(date) = " . $year . "");
+                    if (count($getdata) > 0) {
+                        $sSql = "Update entrytrans set amount=" . $amount . " where amountmasterid=" . $eamountid . " and userid=" . $userid . " and month(date) = " . $month . " and year(date) = " . $year . "";
+                        DB::update($sSql);
+                    } else {
+                        DB::table('entrytrans')->insert([
+                            'amount' => $amount,
+                            'userid' => $userid,
+                            'amountmasterid' => $eamountid,
+                            'date' => $date,
+                        ]);
+                    }
                 }
+            }
+            if ($mode == 'addnewtab') {
+                $newamount = $request->newamount;
+
+                DB::table('amountmaster')->insert([
+                    'amount' => $newamount,
+                ]);
             }
             return response()->json($result, 200);
         }

@@ -2,29 +2,37 @@ import React from 'react'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ControlPointRoundedIcon from '@mui/icons-material/ControlPointRounded';
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import Select from '@mui/material/Select';
 import { DataGrid, GridToolbar, GridActionsCellItem, GridToolbarContainer, GridToolbarExport } from '@mui/x-data-grid';
 import { Head } from '@inertiajs/react';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { styled } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import FormControl from '@mui/material/FormControl';
+import Button from 'react-bootstrap/Button';
+import { Col, Row } from 'react-bootstrap';
+import Modal from 'react-bootstrap/Modal';
+import dayjs from 'dayjs';
+import Form from 'react-bootstrap/Form';
+import Card from 'react-bootstrap/Card';
+import ListGroup from 'react-bootstrap/ListGroup';
 import "bootstrap/dist/css/bootstrap.min.css";
 import 'bootstrap/dist/js/bootstrap.min.js';
 import '../../../css/main.css';
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import FormControl from '@mui/material/FormControl';
-import { Col, Row } from 'react-bootstrap';
-import dayjs from 'dayjs';
 
-function Index({ auth, amounts }) {
+function Index({ auth, amounts, mop }) {
     const [rows, setrows] = useState([]);
-    const [eamount, seteamount] = useState(0);
-    const [splitamount, setsplitamount] = useState(0);
-
-
+    const [eamountid, seteamountid] = useState(null);
+    const [prevtotamnt, setprevtotamnt] = useState(0);
     const [totalamount, settotalamount] = useState(0);
+    const [newamount, setnewamount] = useState('');
     const [month, setmonth] = useState(dayjs());
+    const [amntmodal, setamntmodal] = useState(false);
+    const [detailmodal, setdetailmodal] = useState(false);
 
     const StyledBox = styled('div')(({ theme }) => ({
         height: 480,
@@ -42,50 +50,97 @@ function Index({ auth, amounts }) {
         },
     }));
 
-    useEffect(() => {
+    function SelectEditInputCell(props) {
+        const { id, value, field } = props;
 
-        if (amounts.length > 0) {
-            let amnt = amounts[0].amount;
-            seteamount(amnt);
+        const handleChange = async (event) => {
+            let rowdata = props.row;
+            if(rowdata.id == id) {
+                rowdata.mopid = event.target.value
+            }
+            processRowUpdate(rowdata);
+        };
+
+        return (
+            <Select
+                value={value}
+                onChange={handleChange}
+                size="small"
+                sx={{ height: 1 }}
+                native
+                autoFocus
+            >
+                {mop.map((mp) => {
+                    return (
+                        <option key={mp.id} value={mp.id}>{mp.modeofpayment}</option>
+                    )
+                })}
+            </Select>
+        );
+    }
+
+    const renderSelectEditInputCell = (params) => {
+        return <SelectEditInputCell {...params} />;
+    };
+
+    const addnewtab = () => {
+        if (newamount == '') {
+            alert("Enter new amount..");
+            return false;
         }
-    }, []);
+        axios({
+            method: "POST",
+            url: route("admin.getall"),
+            data: { mode: "addnewtab", newamount: newamount },
+        }).then(res => {
+            const respmsg = res.data;
+            setamntmodal(false);
+            window.location.reload();
+        }).catch((error) => {
+            alert(error);
+        });
 
-    // useEffect(() => {
-    //     // let userlength = users.length;
-    //     // let split = eamount / userlength;
-    //     // setsplitamount(split);
-
-    //     // let row = users.map((user) => {
-    //     //     user.amount = split.toFixed(2);
-    //     //     return user;
-    //     // });
-    //     setrows(users);
-    // }, [eamount]);
+    }
 
     const getamount = () => {
         axios({
             method: "POST",
             url: route("admin.getall"),
-            data: { mode: "getamountbymonth", month: month },
+            data: { mode: "getamountbymonth", month: month, eamountid: eamountid?.id },
         }).then(res => {
             const respmsg = res.data;
+            let arrdata = respmsg?.bydate;
+            let nodate = respmsg?.nodate;
+            setprevtotamnt(nodate);
             let totamnt = 0;
-            if (respmsg.length > 0) {
-                respmsg.map((val) => {
+            if (arrdata.length > 0) {
+                arrdata.map((val) => {
                     totamnt = parseFloat(totamnt) + parseFloat(val?.amount);
                 });
             }
             settotalamount(totamnt);
-            setrows(respmsg);
-            console.log(respmsg)
+            setrows(arrdata);
         }).catch((error) => {
             alert(error);
         });
     }
 
     useEffect(() => {
-        getamount();
-    }, [month]);
+
+        if (amounts.length > 0) {
+            let amnt = amounts[0];
+            seteamountid(amnt);
+        }
+    }, []);
+
+    const monthname = (dt) => {
+        let mlist = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return mlist[dt.getMonth()];
+    }
+
+    useEffect(() => {
+        if (eamountid != null) getamount();
+    }, [month, eamountid]);
 
     const processRowUpdate = (newRow) => {
         let amount = parseFloat(newRow.amount);
@@ -94,7 +149,7 @@ function Index({ auth, amounts }) {
         axios({
             method: "POST",
             url: route("admin.getall"),
-            data: { mode: "saveamount", month: month, amount: amount, userid: userid },
+            data: { mode: "editdata", month: month, editdata: newRow, eamountid: eamountid?.id },
         }).then(res => {
             const respmsg = res.data;
             getamount();
@@ -102,8 +157,6 @@ function Index({ auth, amounts }) {
             alert(error);
         });
 
-        // settotalamount(amount);
-        // console.log(amount)
     }
 
     function CustomToolbar() {
@@ -115,11 +168,11 @@ function Index({ auth, amounts }) {
     }
 
     const columns = [
-        { field: 'created_at', headerName: 'Date', width: 150, editable: true },
+        { field: 'created_at', headerName: 'User Date', width: 150, editable: true },
         { field: 'name', headerName: 'Name', width: 200, editable: true },
         { field: 'email', headerName: 'Email', width: 250, editable: true },
         { field: 'mobile', headerName: 'Mobile', width: 200, editable: true },
-        { field: 'modeofpayment', headerName: 'Mode of Payment', width: 200, editable: true },
+        { field: 'modeofpayment', headerName: 'Mode of Payment', width: 200, renderEditCell: renderSelectEditInputCell, editable: true },
         { field: 'amount', headerName: 'Amount', width: 150, editable: true },
         // {
         //     field: 'action', headerName: 'Action', width: 150, type: 'actions', getActions: ({ id, row }) => {
@@ -141,19 +194,23 @@ function Index({ auth, amounts }) {
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <Row className='mb-2'>
-                        <Col lg={9}>
-                            <ul className="nav nav-tabs" id="myTab" role="tablist">
+                        <Col lg={1} className='p-2'>
+                            <AddCircleOutlineIcon className="cursor-pointer" onClick={() => setamntmodal(true)} />
+                        </Col>
+                        <Col lg={8}>
+                            <ul className="nav nav-tabs nav-tabs-scroll" id="myTab" role="tablist">
                                 {amounts.map((amnt) => {
                                     let active = '';
-                                    if (amnt.amount == eamount) active = "active";
+                                    if (amnt.id == eamountid?.id) active = "active";
                                     return (
                                         <li key={amnt.id} className="nav-item" role="presentation">
-                                            <button className={"nav-link " + active} onClick={() => seteamount(amnt.amount)} data-bs-toggle="tab" type="button" role="tab" aria-controls="home" aria-selected="true">{amnt.amount}</button>
+                                            <button className={"nav-link " + active} onClick={() => seteamountid(amnt)} data-bs-toggle="tab" type="button" role="tab" aria-controls="home" aria-selected="true">{amnt.amount}</button>
                                         </li>
                                     )
                                 })}
                             </ul>
                         </Col>
+
                         <Col lg={3}>
                             <FormControl fullWidth>
                                 <div>
@@ -183,10 +240,38 @@ function Index({ auth, amounts }) {
                                     csvOptions: { utf8WithBom: true }
                                 },
                             }} />
-                        <div className='position-absolute fw-bold fs-5' style={{ right: "150px" }}>Total : <span className='ml-2'>{totalamount}</span></div>
+                        <div className='position-absolute fw-bold fs-5' style={{ right: "150px" }}>Total : <span className='ml-2 cursor-pointer' onClick={() => setdetailmodal(true)}>{totalamount}</span></div>
                     </StyledBox>
                 </div>
             </div>
+            <Modal show={amntmodal} onHide={() => setamntmodal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Add New Tab</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Control type="text" placeholder="Enter amount" onChange={(event) => setnewamount(event.target.value)} /><br />
+                    <Button variant="success" onClick={addnewtab}>Add Tab</Button>
+                </Modal.Body>
+            </Modal>
+            <Modal show={detailmodal} onHide={() => setdetailmodal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Total Amount</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Card >
+                        <Card.Body>
+                            <ListGroup>
+                                <ListGroup.Item><b>Month</b>: {monthname(new Date(month?.$d)) + ' - ' + (new Date(month?.$d).getFullYear())}</ListGroup.Item>
+                                <ListGroup.Item><b>Amount</b>: {eamountid?.amount} </ListGroup.Item>
+                                <ListGroup.Item><b>Prev Total Amount</b>: {prevtotamnt}</ListGroup.Item>
+                                <ListGroup.Item><b>Total Amount</b>: {totalamount}</ListGroup.Item>
+                                <ListGroup.Item>{eamountid?.amount + ' - ' + (4 / 100 * eamountid?.amount) + ' = ' + (eamountid?.amount - ((4 / 100 * eamountid?.amount)))}</ListGroup.Item>
+                                <ListGroup.Item className={((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((4 / 100 * eamountid?.amount))) + ' - ' + prevtotamnt + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount)} </ListGroup.Item>
+                            </ListGroup>
+                        </Card.Body>
+                    </Card>
+                </Modal.Body>
+            </Modal>
         </AuthenticatedLayout>
     )
 }

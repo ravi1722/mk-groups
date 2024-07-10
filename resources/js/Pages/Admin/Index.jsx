@@ -6,7 +6,10 @@ import Select from '@mui/material/Select';
 import { DataGrid, GridToolbar, GridActionsCellItem, GridToolbarContainer, GridToolbarExport } from '@mui/x-data-grid';
 import { Head } from '@inertiajs/react';
 import EditIcon from '@mui/icons-material/Edit';
+import MessageIcon from '@mui/icons-material/Message';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import { styled } from '@mui/material/styles';
 import { useEffect, useState } from 'react';
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -33,6 +36,12 @@ function Index({ auth, amounts, mop }) {
     const [month, setmonth] = useState(dayjs());
     const [amntmodal, setamntmodal] = useState(false);
     const [detailmodal, setdetailmodal] = useState(false);
+    const [addusermodal, setaddusermodal] = useState(false);
+    const [ename, setename] = useState('');
+    const [eemail, seteemail] = useState('');
+    const [emobile, setemobile] = useState('');
+    const [emop, setemop] = useState('');
+    const [ecettu, setecettu] = useState('');
 
     const StyledBox = styled('div')(({ theme }) => ({
         height: 480,
@@ -55,7 +64,7 @@ function Index({ auth, amounts, mop }) {
 
         const handleChange = async (event) => {
             let rowdata = props.row;
-            if(rowdata.id == id) {
+            if (rowdata.id == id) {
                 rowdata.mopid = event.target.value
             }
             processRowUpdate(rowdata);
@@ -125,6 +134,56 @@ function Index({ auth, amounts, mop }) {
         });
     }
 
+    const addnewuser = () => {
+        let bool = true;
+        if (ename == '') {
+            alert("Enter name..");
+            bool = false;
+        } else if (eemail == '') {
+            alert("Enter email..");
+            bool = false;
+        } else if (emobile == '') {
+            alert("Enter mobile..");
+            bool = false;
+        }
+        // else if (emop == '') {
+        //     alert("Select mode of payment..");
+        //     bool = false;
+        // } 
+        else if (ecettu == '') {
+            alert("Select mode of payment..");
+            bool = false;
+        }
+
+        if (bool) {
+            axios({
+                method: "POST",
+                url: route("admin.getall"),
+                data: { mode: "adduser", ename: ename, eemail: eemail, month: month, emobile: emobile, emop: emop, ecettu: ecettu },
+            }).then(res => {
+                const respmsg = res.data;
+                window.location.reload();
+            }).catch((error) => {
+                alert(error);
+            });
+        }
+    }
+
+    const deleteUser = (id) => {
+        if (confirm("Are you sure to delete this user?")) {
+            axios({
+                method: "POST",
+                url: route("admin.getall"),
+                data: { mode: "deleteuser", id: id },
+            }).then(res => {
+                const respmsg = res.data;
+                window.location.reload();
+            }).catch((error) => {
+                alert(error);
+            });
+        }
+    }
+
     useEffect(() => {
 
         if (amounts.length > 0) {
@@ -162,32 +221,39 @@ function Index({ auth, amounts, mop }) {
     function CustomToolbar() {
         return (
             <GridToolbarContainer>
+                <Button color="primary" startIcon={<AddIcon />} onClick={() => setaddusermodal(true)}>
+                    Add user
+                </Button>
                 <GridToolbarExport />
             </GridToolbarContainer>
         );
     }
 
     const columns = [
-        { field: 'created_at', headerName: 'User Date', width: 150, editable: true },
-        { field: 'name', headerName: 'Name', width: 200, editable: true },
-        { field: 'email', headerName: 'Email', width: 250, editable: true },
+        { field: 'created_at', headerName: 'Cettu Start Month', width: 150, editable: true },
+        { field: 'name', headerName: 'Name', width: 180, editable: true },
+        { field: 'email', headerName: 'Email', width: 200, editable: true },
         { field: 'mobile', headerName: 'Mobile', width: 200, editable: true },
         { field: 'modeofpayment', headerName: 'Mode of Payment', width: 200, renderEditCell: renderSelectEditInputCell, editable: true },
-        { field: 'amount', headerName: 'Amount', width: 150, editable: true },
-        // {
-        //     field: 'action', headerName: 'Action', width: 150, type: 'actions', getActions: ({ id, row }) => {
-        //         return [
-        //             <>
-        //                 <GridActionsCellItem
-        //                     icon={<EditIcon />}
-        //                     label="Discard changes" />
-        //                 <GridActionsCellItem
-        //                     icon={<DeleteIcon />}
-        //                     label="Discard changes" />
-        //             </>
-        //         ]
-        //     }
-        // },
+        { field: 'amount', headerName: 'Amount', width: 120, editable: true },
+        {
+            field: 'action', headerName: 'Action', width: 150, type: 'actions', getActions: ({ id, row }) => {
+                console.log(row)
+                return [
+                    <>
+                        <GridActionsCellItem
+                            icon={<MessageIcon />}
+                            label="Send message" />
+                        <GridActionsCellItem
+                            icon={<WhatsAppIcon />}
+                            label="Send Whatsapp" />
+                        <GridActionsCellItem
+                            icon={<DeleteIcon />}
+                            label="Discard changes" onClick={() => deleteUser(id)} />
+                    </>
+                ]
+            }
+        },
     ]
     return (
         <AuthenticatedLayout user={auth.user} header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard&nbsp;<ControlPointRoundedIcon /></h2>}>
@@ -244,6 +310,27 @@ function Index({ auth, amounts, mop }) {
                     </StyledBox>
                 </div>
             </div>
+            <Modal show={addusermodal} onHide={() => setaddusermodal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Add New User</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Control type="text" placeholder="Enter Name" onChange={(event) => setename(event.target.value)} /><br />
+                    <Form.Control type="text" placeholder="Enter Email" onChange={(event) => seteemail(event.target.value)} /><br />
+                    <Form.Control type="text" placeholder="Enter Mobile" onChange={(event) => setemobile(event.target.value)} /><br />
+
+                    <Form.Select aria-label="Default select example" className='mb-3' onChange={(event) => setecettu(event.target.value)}>
+                        <option value={''} selected>Select Cettu</option>
+                        {amounts.map((amnt) => {
+                            return (
+                                <option value={amnt.id}>{amnt.amount}</option>
+                            )
+                        })}
+                    </Form.Select>
+                    {/* <Form.Control type="text" placeholder="Enter Name" onChange={(event) => setemop(event.target.value)} /><br /> */}
+                    <Button variant="success" onClick={addnewuser}>Add User</Button>
+                </Modal.Body>
+            </Modal>
             <Modal show={amntmodal} onHide={() => setamntmodal(false)}>
                 <Modal.Header closeButton>
                     <Modal.Title>Add New Tab</Modal.Title>
@@ -266,7 +353,9 @@ function Index({ auth, amounts, mop }) {
                                 <ListGroup.Item><b>Prev Total Amount</b>: {prevtotamnt}</ListGroup.Item>
                                 <ListGroup.Item><b>Total Amount</b>: {totalamount}</ListGroup.Item>
                                 <ListGroup.Item>{eamountid?.amount + ' - ' + (4 / 100 * eamountid?.amount) + ' = ' + (eamountid?.amount - ((4 / 100 * eamountid?.amount)))}</ListGroup.Item>
-                                <ListGroup.Item className={((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((4 / 100 * eamountid?.amount))) + ' - ' + prevtotamnt + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount)} </ListGroup.Item>
+                                {/* <ListGroup.Item className={((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((4 / 100 * eamountid?.amount))) + ' - ' + prevtotamnt + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount)} </ListGroup.Item> */}
+                                <ListGroup.Item className={((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((4 / 100 * eamountid?.amount))) + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - totalamount)} </ListGroup.Item>
+                                <ListGroup.Item >{prevtotamnt + " + " + totalamount + " = " + (parseFloat(prevtotamnt) + parseFloat(totalamount))}</ListGroup.Item>
                             </ListGroup>
                         </Card.Body>
                     </Card>

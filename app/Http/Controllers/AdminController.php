@@ -23,13 +23,15 @@ class AdminController extends Controller
             if ($mode == 'getamountbymonth') {
                 $month = date('m', strtotime($request->month));
                 $year = date('Y', strtotime($request->month));
-                $endDate = date('Y-m-d', strtotime($request->month)) . " 00:00:00";
+                $endDate = date('Y-m-01', strtotime($request->month)) . " 00:00:00";
                 $eamountid = $request->eamountid;
 
-                $result['bydate'] = DB::select("Select a.id,name,email,mobile,DATE_FORMAT(created_at, '%D %M %Y') created_at,a.mopid,
-                modeofpayment,NVL(c.amount,0) amount from users a Left join mop_master b on a.mopid=b.id left Join entrytrans c on a.id=c.userid 
-                and c.amountmasterid=" . $eamountid . " and month(c.date) = " . $month . " and year(c.date) = " . $year . " order by a.id");
-                $beforedate = DB::select("Select NVL(sum(amount),0) amount from entrytrans where amountmasterid=" . $eamountid . " and date < '" . $endDate . "'");
+                $result['bydate'] = DB::select("Select a.id,name,email,mobile,isadmin,DATE_FORMAT(startmonth, '%M %Y') created_at,
+                NVL(c.mopid,0) mopid,modeofpayment,NVL(c.amount,0) amount,b.transid amounttransid from users a Left Join amounttrans b on a.id=b.userid Left join 
+                entrytrans c on b.transid=c.amounttransid and  month(c.date) = " . $month . " and year(c.date) = " . $year . "
+                Left join mop_master d on c.mopid=d.id where amountid =" . $eamountid. " Order by name");
+
+                $beforedate = DB::select("Select NVL(sum(amount),0) amount from amounttrans a Left Join entrytrans b on a.transid=b.amounttransid where amountid=" . $eamountid . " and date < '" . $endDate . "'");
                 $result['nodate'] = $beforedate[0]->amount;
             }
             if ($mode == 'editdata') {
@@ -42,24 +44,25 @@ class AdminController extends Controller
                     $mobile = $editdata['mobile'];
                     $mopid = $editdata['mopid'];
                     $amount = $editdata['amount'];
+                    $amounttransid = $editdata['amounttransid'];
 
                     $eamountid = $request->eamountid;
-                    $date = date('Y-m-d', strtotime($request->month));
+                    $date = date('Y-m-01', strtotime($request->month));
                     $month = date('m', strtotime($request->month));
                     $year = date('Y', strtotime($request->month));
 
-                    $sSql = "Update users set name='" . $name . "',email='" . $email . "',mobile='" . $mobile . "',mopid=" . $mopid . " where id=" . $userid;
+                    $sSql = "Update users set name='" . $name . "',email='" . $email . "',mobile='" . $mobile . "' where id=" . $userid;
                     DB::update($sSql);
 
-                    $getdata = DB::select("Select transid from entrytrans where amountmasterid=" . $eamountid . " and userid=" . $userid . " and month(date) = " . $month . " and year(date) = " . $year . "");
+                    $getdata = DB::select("Select transid from entrytrans where amounttransid=" . $amounttransid . " and month(date) = " . $month . " and year(date) = " . $year . "");
                     if (count($getdata) > 0) {
-                        $sSql = "Update entrytrans set amount=" . $amount . " where amountmasterid=" . $eamountid . " and userid=" . $userid . " and month(date) = " . $month . " and year(date) = " . $year . "";
+                        $sSql = "Update entrytrans set amount=" . $amount . ",mopid=" . $mopid . " where amounttransid=" . $amounttransid . " and month(date) = " . $month . " and year(date) = " . $year . "";
                         DB::update($sSql);
                     } else {
                         DB::table('entrytrans')->insert([
                             'amount' => $amount,
-                            'userid' => $userid,
-                            'amountmasterid' => $eamountid,
+                            'mopid' => $mopid,
+                            'amounttransid' => $amounttransid,
                             'date' => $date,
                         ]);
                     }
@@ -71,6 +74,39 @@ class AdminController extends Controller
                 DB::table('amountmaster')->insert([
                     'amount' => $newamount,
                 ]);
+            }
+            if ($mode == 'adduser') {
+                $ename = $request->ename;
+                $eemail = $request->eemail;
+                $emobile = $request->emobile;
+                // $emop = $request->emop;
+                $ecettu = $request->ecettu;
+                $endDate = date('Y-m-d', strtotime($request->month)) . " 00:00:00";
+
+                $id = DB::table('users')->insertGetId([
+                    'name' => $ename,
+                    'mobile' => $emobile,
+                    'email' => $eemail,
+                    'startmonth' => $endDate,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'password' => '$2y$12$ju.JG4TQ8qHJxHM3zDD9Muw0G4l6IxKvBqHixMGsLrZbVANZT/s5q',
+                ]);
+
+                DB::table('amounttrans')->insert([
+                    'userid' => $id,
+                    'amountid' => $ecettu,
+                ]);
+            }
+            if ($mode == 'deleteuser') {
+                $id = $request->id;
+                $gettrans = DB::select("Select transid From amounttrans where userid=".$id);
+                if(count($gettrans) > 0){
+                    foreach($gettrans as $trans){
+                        DB::table('entrytrans')->where('amounttransid', $trans->transid)->delete();
+                    }
+                }
+                DB::table('amounttrans')->where('userid', $id)->delete();
+                DB::table('users')->where('id', $id)->delete();
             }
             return response()->json($result, 200);
         }

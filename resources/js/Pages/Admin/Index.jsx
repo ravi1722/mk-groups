@@ -26,6 +26,7 @@ import ListGroup from 'react-bootstrap/ListGroup';
 import "bootstrap/dist/css/bootstrap.min.css";
 import 'bootstrap/dist/js/bootstrap.min.js';
 import '../../../css/main.css';
+import WhatsappForm from './WhatsappForm';
 
 function Index({ auth, amounts, mop }) {
     const [rows, setrows] = useState([]);
@@ -42,7 +43,9 @@ function Index({ auth, amounts, mop }) {
     const [emobile, setemobile] = useState('');
     const [emop, setemop] = useState('');
     const [ecettu, setecettu] = useState('');
-
+    const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+    const [intperc, setintperc] = useState(0);
+    
     const StyledBox = styled('div')(({ theme }) => ({
         height: 480,
         width: '100%',
@@ -244,7 +247,7 @@ function Index({ auth, amounts, mop }) {
                         <GridActionsCellItem
                             icon={<MessageIcon />}
                             label="Send message" />
-                        <GridActionsCellItem
+                        <GridActionsCellItem onClick={() => setShowWhatsappModal(true)}
                             icon={<WhatsAppIcon />}
                             label="Send Whatsapp" />
                         <GridActionsCellItem
@@ -352,13 +355,22 @@ function Index({ auth, amounts, mop }) {
                                 <ListGroup.Item><b>Amount</b>: {eamountid?.amount} </ListGroup.Item>
                                 <ListGroup.Item><b>Prev Total Amount</b>: {prevtotamnt}</ListGroup.Item>
                                 <ListGroup.Item><b>Total Amount</b>: {totalamount}</ListGroup.Item>
-                                <ListGroup.Item>{eamountid?.amount + ' - ' + (4 / 100 * eamountid?.amount) + ' = ' + (eamountid?.amount - ((4 / 100 * eamountid?.amount)))}</ListGroup.Item>
+                                <ListGroup.Item><b>Intrest Percentage:</b> <input type='number' value={intperc} min={0} onChange={(event) => setintperc(event.target.value)}/></ListGroup.Item>
+                                <ListGroup.Item>{eamountid?.amount + ' - ' + (intperc / 100 * eamountid?.amount) + ' = ' + (eamountid?.amount - ((intperc / 100 * eamountid?.amount)))}</ListGroup.Item>
                                 {/* <ListGroup.Item className={((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((4 / 100 * eamountid?.amount))) + ' - ' + prevtotamnt + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - prevtotamnt - totalamount)} </ListGroup.Item> */}
-                                <ListGroup.Item className={((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((4 / 100 * eamountid?.amount))) + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((4 / 100 * eamountid?.amount))) - totalamount)} </ListGroup.Item>
+                                <ListGroup.Item className={((eamountid?.amount - ((intperc / 100 * eamountid?.amount))) - totalamount) < 0 ? "text-danger" : ""}>{(eamountid?.amount - ((intperc / 100 * eamountid?.amount))) + ' - ' + totalamount + ' = ' + ((eamountid?.amount - ((intperc / 100 * eamountid?.amount))) - totalamount)} </ListGroup.Item>
                                 <ListGroup.Item >{prevtotamnt + " + " + totalamount + " = " + (parseFloat(prevtotamnt) + parseFloat(totalamount))}</ListGroup.Item>
                             </ListGroup>
                         </Card.Body>
                     </Card>
+                </Modal.Body>
+            </Modal>
+            <Modal show={showWhatsappModal} onHide={() => setShowWhatsappModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Send to Whatsapp</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <WhatsappForm />
                 </Modal.Body>
             </Modal>
         </AuthenticatedLayout>

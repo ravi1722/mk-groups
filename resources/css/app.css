@@ -1,3 +1,78 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.navhead {
+    background-image: linear-gradient(
+        to left,
+        #1a2980 0%,
+        #26d0ce 51%,
+        #1a2980 100%
+    );
+    text-transform: uppercase;
+}
+.navanchor a {
+    border: none !important;
+    color: white !important;
+    padding: 15px;
+    margin-right: 78px;
+    top: 3px;
+    position: relative;
+}
+.profi {
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px,
+        rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px,
+        rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
+    border-radius: 5%;
+}
+@media (width <=768px) {
+    .imgred {
+        width: 60px !important;
+    }
+}
+@media (width <=768px) {
+    .dateftm {
+        margin: 8px 5px 0px 5px !important;
+    }
+}
+.dateftm {
+    margin-top: -6px;
+}
+.btn_rght {
+    float: right !important;
+}
+.btn_rght > .MuiButtonBase-root {
+    color: #0d6efd !important;
+    font-size: 11px !important;
+}
+.head_hght
+    > .MuiDataGrid-main
+    > .MuiDataGrid-virtualScroller
+    > .MuiDataGrid-topContainer {
+    height: 58px !important;
+}
+.head_hght
+    > .MuiDataGrid-main
+    > .MuiDataGrid-virtualScroller
+    > .MuiDataGrid-topContainer
+    > .MuiDataGrid-columnHeader {
+    background-color: black !important;
+}
+.MuiDataGrid-main
+    > .MuiDataGrid-virtualScroller
+    > .MuiDataGrid-topContainer
+    > .MuiDataGrid-columnHeaders
+    > .MuiDataGrid-columnHeader {
+    height: 20px !important;
+}
+.MuiDataGrid-columnHeaders > .MuiDataGrid-columnHeader {
+    background-color: red !important;
+}
+.bg_img{
+    background-image: url(https://t3.ftcdn.net/jpg/04/47/19/30/360_F_447193040_0MTKO703A5olX1bC1lON7F4kHiPKEtte.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+.pad_new{
+    padding:136px;
+}

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Twilio\Rest\Client;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class AdminController extends Controller
 {
@@ -29,7 +31,7 @@ class AdminController extends Controller
                 $result['bydate'] = DB::select("Select a.id,name,email,mobile,isadmin,DATE_FORMAT(startmonth, '%M %Y') created_at,
                 NVL(c.mopid,0) mopid,modeofpayment,NVL(c.amount,0) amount,b.transid amounttransid from users a Left Join amounttrans b on a.id=b.userid Left join 
                 entrytrans c on b.transid=c.amounttransid and  month(c.date) = " . $month . " and year(c.date) = " . $year . "
-                Left join mop_master d on c.mopid=d.id where amountid =" . $eamountid. " Order by name");
+                Left join mop_master d on c.mopid=d.id where amountid =" . $eamountid . " Order by name");
 
                 $beforedate = DB::select("Select NVL(sum(amount),0) amount from amounttrans a Left Join entrytrans b on a.transid=b.amounttransid where amountid=" . $eamountid . " and date < '" . $endDate . "'");
                 $result['nodate'] = $beforedate[0]->amount;
@@ -99,9 +101,9 @@ class AdminController extends Controller
             }
             if ($mode == 'deleteuser') {
                 $id = $request->id;
-                $gettrans = DB::select("Select transid From amounttrans where userid=".$id);
-                if(count($gettrans) > 0){
-                    foreach($gettrans as $trans){
+                $gettrans = DB::select("Select transid From amounttrans where userid=" . $id);
+                if (count($gettrans) > 0) {
+                    foreach ($gettrans as $trans) {
                         DB::table('entrytrans')->where('amounttransid', $trans->transid)->delete();
                     }
                 }
@@ -109,6 +111,56 @@ class AdminController extends Controller
                 DB::table('users')->where('id', $id)->delete();
             }
             return response()->json($result, 200);
+        }
+    }
+    public function sendwhatsapp(Request $request)
+    {
+        $twilioSid = env('TWILIO_AUTH_SID');
+        $twilioToken = env('TWILIO_AUTH_TOKEN');
+        $twilioWhatsAppNumber = env('TWILIO_WHATSAPP_FROM');
+        // $email = $request->email;
+        // $name = $request->name;
+        $recipientNumber = 8610521361;
+        $message = "This is for testing by ravi..";
+
+        $body = "Chettu Details
+
+        குரூப் (Group)  - ".$request->Group."
+
+        மாதம்  (Month) - ".$request->Month."
+
+        சீட்டுத் தொகை (Chettu Amount)  - ".$request->Amount."
+
+        கமிஷன் (Commission)  - Rs. ".$request->Commission."
+
+        தேதி (Date) - ".$request->Date."
+
+        நேரம் (Time) - ".$request->Time." 
+
+        ஏலம் போன தொகை (Auctions Amount) - Rs. ".$request->AuctionAmount."
+
+        ஏலம் எடுத்தவர் : ".$request->Bidder."
+
+        மாத சந்தா (Monthly Subscription) - Rs. ".$request->MonthlySubscription."
+
+        இருப்பு(Saving)  - Rs. ".$request->Saving."
+
+        அடுத்த மாதம் கட்டவேண்டிய தொகை (Next Month Payment Amount)- Rs. ".$request->NextMonthPayAmnt."";
+
+        try {
+            $twilio = new Client($twilioSid, $twilioToken);
+            $twilio->messages
+                ->create(
+                    "whatsapp:+919003683974", // to
+                    array(
+                        "from" => "whatsapp:+14155238886",
+                        "body" => $body
+                    )
+                );
+
+            return back()->with(['success' => 'WhatsApp message sent successfully!']);
+        } catch (Exception $e) {
+            return back()->with(['error' => $e->getMessage()]);
         }
     }
 }
